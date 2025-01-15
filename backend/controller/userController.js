@@ -1,4 +1,5 @@
 import { generateTokenAndSetCookie } from "../lib/generateToken.js";
+import { v2 as cloudinary } from "cloudinary";
 import User from "../model/user.js";
 import bcrypt from "bcryptjs";
 
@@ -92,3 +93,64 @@ export const getMe = async (req, res) => {
         res.status(500).json({ error: "Internal Server Error" });
     }
 };
+
+export const updateUser = async (req, res) => {
+    let { username, address, phone, profileImg } = req.body;
+    const userId = req.user._id;
+
+    try {
+        if (profileImg) {
+            if (user.profileImg) {
+                await cloudinary.uploader.destroy(
+                    user.profileImg.split("/").pop().split(".")[0]
+                );
+            }
+
+            const uploadedResponse = await cloudinary.uploader.upload(profileImg);
+            profileImg = uploadedResponse.secure_url;
+        }
+
+        let user = await User.findById(userId);
+        if (!user) return res.status(404).json({ message: "User not found" });
+
+        user.username = username || user.username;
+        user.address = address || user.address;
+        user.phone = phone || user.phone;
+        await user.save();
+
+        return res.status(200).json(user);
+    } catch (error) {
+        console.log("Error in updateUser: ", error.message);
+        res.status(500).json({ error: error.message });
+    }
+}
+
+export const changePassword = async (req, res) => {
+    try {
+        const { currentPassword, newPassword } = req.body;
+        const userId = req.user._id;
+
+        const user = await User.findById(userId);
+        if (!user) return res.status(404).json({ message: "User not found" });
+
+        const isMatch = await bcrypt.compare(currentPassword, user.password);
+        if (!isMatch) {
+            return res.status(400).json({ error: "Current password is incorrect" });
+        }
+
+        if (newPassword.length < 6) {
+            return res
+                .status(400)
+                .json({ error: "Password must be at least 6 characters long" });
+        }
+
+        const salt = await bcrypt.genSalt(10);
+        user.password = await bcrypt.hash(newPassword, salt);
+
+        await user.save();
+        res.status(200).json({ message: "Password updated successfully" });
+    } catch (error) {
+        console.error("Error in changePassword:", error.message);
+        res.status(500).json({ error: "Internal Server Error" });
+    }
+}
