@@ -2,7 +2,7 @@ import { Slider } from "../components/common/Slider";
 import { ProductList } from "../components/common/ProductList";
 import { PopularSection } from "../components/common/PopularSection";
 
-const HomePage = () => {
+const Home = () => {
     return (
         <>
             <Slider />
@@ -12,4 +12,4 @@ const HomePage = () => {
     );
 };
 
-export default HomePage;
+export default Home;
